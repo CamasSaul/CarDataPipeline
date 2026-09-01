@@ -1,0 +1,35 @@
+services:
+  app:
+    build: ./app
+    depends_on:
+      - postgres
+      - ollama
+    environment:
+      DATABASE_URL: postgresql://cars:fs2da@db:5432/cardb
+      OLLAMA_URL: http://ollama:11434
+
+  scrapper:
+    build: ./scrapper
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://cars:fs2da@db:5432/cardb
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: cars
+      POSTGRES_PASSWORD: fs2da
+      POSTGRES_DB: cardb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+  
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+
+volumes:
+  postgres_data:
+  ollama_data:
