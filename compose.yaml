@@ -5,7 +5,7 @@ services:
       - postgres
       - ollama
     environment:
-      DATABASE_URL: postgresql://cars:fs2da@db:5432/cardb
+      DATABASE_URL: postgresql://cars:fs2da@postgres:5432/cardb
       OLLAMA_URL: http://ollama:11434
 
   scrapper:
@@ -13,7 +13,7 @@ services:
     depends_on:
       - postgres
     environment:
-      DATABASE_URL: postgresql://cars:fs2da@db:5432/cardb
+      DATABASE_URL: postgresql://cars:fs2da@postgres:5432/cardb
 
   postgres:
     image: postgres:17
@@ -24,6 +24,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      ["5433:5432"]
   
   ollama:
     image: ollama/ollama:latest
