@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS cars (
    color TEXT,
    condition TEXT,
    owners INTEGER,
-   price INTEGER NOT NULL
+   price INTEGER NOT NULL,
+   location TEXT
 );
 
 CREATE TABLE IF NOT EXISTS cars_images (
@@ -45,3 +46,8 @@ CREATE TABLE IF NOT EXISTS cars_images (
    img_4 BYTEA,
    img_5 BYTEA
 );
+
+-- Paginas fuente preconfiguradas
+INSERT INTO web_sources (url, title) VALUES ('https://www.facebook.com/groups/2802491423342198?locale=es_LA', 'Autos en Venta Querétaro');
+INSERT INTO web_sources (url, title) VALUES ('https://www.facebook.com/groups/1712927538960670?locale=es_LA', 'venta y cambio de autos Querétaro (particulares). no coyotes .');
+INSERT INTO web_sources (url, title) VALUES ('https://www.facebook.com/groups/AUTOSencalientequeretaro?locale=es_LA', 'TIANGUIS DE AUTOS QUERETARO');

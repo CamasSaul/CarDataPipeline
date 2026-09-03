@@ -1,11 +1,12 @@
-import playwright
 import argparse
+import asyncio
 import pathlib
 import logging
 import psycopg
-import bs4
 import sys
 import os
+
+
 
 # Resolver rutas
 BASE_DIR = pathlib.Path(__file__).resolve().parent
@@ -19,6 +20,11 @@ parser.add_argument(
    choices=['d', 'i', 'w', 'e'],
    default='i'
 )
+parser.add_argument(
+   "-d", "--debug",
+   action="store_true",
+   help="inicia el proceso en modo debug."
+)
 args = parser.parse_args()
 letter_to_level = {
    'd' : logging.DEBUG,
@@ -26,7 +32,10 @@ letter_to_level = {
    'w' : logging.WARNING,
    'e' : logging.ERROR
 }
-LOGGING_LEVEL = letter_to_level[args.loglevel]
+letter = args.loglevel
+if args.debug:
+   letter = 'd'
+LOGGING_LEVEL = letter_to_level[letter]
 
 # Configurar logging
 logging.basicConfig(
@@ -38,29 +47,44 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Obtener variables de entorno
-DATABASE_URL = os.getenv("DATABASE_URL")
-
+DATABASE_URL = os.getenv("DATABASE_URL", default="")
+if not DATABASE_URL:
+   logger.error("No se econtro la variable de entorno: DATABASE_URL")
+   sys.exit(2)
 
 ### Funciones ###
 
 # Probar conexion con postgres
-def test_postgres_db():
-   if not DATABASE_URL:
-      logger.error("No se econtro la variable de entorno: DATABASE_URL")
-      return False
+def test_postgres_db() -> bool:
    with psycopg.connect(DATABASE_URL):
       logger.info("Conexion con postgres: ok")
    return True
 
 
+def get_web_sources() -> dict[int, tuple[str]]:
+   with psycopg.connect(DATABASE_URL) as conn:
+      cur = conn.execute("SELECT * FROM web_sources;")
+      sources = cur.fetchall()
+   return {
+      source[0]: source[1:]
+      for source in sources
+   }
+
+
 # Main
-def main ():
+def main():
    try:
       # Probar conexion a la base de datos
       if not test_postgres_db():
          logger.error("No se pudo conectar con la db.")
          sys.exit(2)
-      # Extraer la fuente para scrapear TODO
+      # Extraer la fuente para scrapear
+      logger.debug("Web sources %s", get_web_sources())
+      # sources = getSources()
+      # scrapper = Scrapper(sources)
+      # while True:
+      #    data = asyncio.run(scrapper.cicle())
+      #    insertDataToDB(data)
       # Loop de scrapping
       #    - Abrir una instancia del navegador y conectar con la fuente
       #    - Hacer scroll al feed
