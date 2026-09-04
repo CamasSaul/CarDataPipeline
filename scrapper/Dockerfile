@@ -6,4 +6,6 @@ COPY . .
 
 RUN pip install -e .
 
+RUN playwright install firefox
+
 CMD ["python", "scrapping.py"]

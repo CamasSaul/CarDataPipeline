@@ -3,3 +3,5 @@ TODO.md
 notes.md
 dev
 *.log
+__pycache__/
+cookies.json

@@ -1,3 +1,8 @@
+# READ HERE.
+# TODO
+
+
+# Library imports
 import argparse
 import asyncio
 import pathlib
@@ -6,6 +11,11 @@ import psycopg
 import sys
 import os
 
+# Local modules imports
+from scrapper import scrapper_cicle
+
+# Typing imports
+from typing import Any
 
 
 # Resolver rutas
@@ -61,47 +71,64 @@ def test_postgres_db() -> bool:
    return True
 
 
-def get_web_sources() -> dict[int, tuple[str]]:
+# Obtener los web_sources de la base de datos
+def get_web_sources() -> list[dict[str, Any]]:
    with psycopg.connect(DATABASE_URL) as conn:
       cur = conn.execute("SELECT * FROM web_sources;")
       sources = cur.fetchall()
-   return {
-      source[0]: source[1:]
+   return [
+      {"id": source[0],
+      "url": source[1],
+      "title": source[2]}
       for source in sources
-   }
+   ]
+
+
+# Insertar los datos de un cilco de scrapping a la base de datos
+def insert_raw_posts_to_db(raw_posts:list[tuple[Any]]) -> None:
+   for raw_post in raw_posts:
+      with psycopg.connect(DATABASE_URL) as conn:
+         conn.execute(
+            "INSERT INTO raw_posts (" \
+            "id_web_src," \
+            "post_link," \
+            "raw_text," \
+            "VALUES (?,?,?)",
+            raw_post
+         )
 
 
 # Main
-def main():
+async def main():
    try:
       # Probar conexion a la base de datos
       if not test_postgres_db():
          logger.error("No se pudo conectar con la db.")
          sys.exit(2)
       # Extraer la fuente para scrapear
-      logger.debug("Web sources %s", get_web_sources())
-      # sources = getSources()
-      # scrapper = Scrapper(sources)
-      # while True:
-      #    data = asyncio.run(scrapper.cicle())
-      #    insertDataToDB(data)
-      # Loop de scrapping
-      #    - Abrir una instancia del navegador y conectar con la fuente
-      #    - Hacer scroll al feed
-      #    - Extraer los links individuales de las publicaciones
-      #    - Extraer toda la informacion e imgs de cada publicacion
-      #    - Procesar la multimedia recolectada
-      #    - Insertar la informacion a la base de datos
-      #    - Esperar un delay (si aplica), y repetir
+      sources = get_web_sources()
+      # Consumir el generador asincrono del modulo scrapper.py
+      async for raw_posts, raw_imgs in scrapper_cicle(sources):
+         # Insertar los datos extraidos a la db
+         for raw_post in raw_posts:
+            logger.debug(f'{raw_post}')
+         # TODO insert_raw_posts_to_db(raw_posts)
+         # Procesar las imagenes extraidas (comprimir, seleccionar)
+         # TODO process_raw_imgs(raw_imgs)
+         # Insertar imagenes procesadas a la db
+         # TODO insert_imgs_to_db
+         # TODO Esperar un delay
       # Pasos finales del proceso de scrapping
+   except KeyboardInterrupt:
+      logger.warning("Proceso detenido por el usuario.")
    except Exception as e:
       logger.exception(e)
       sys.exit(1)
    finally:
-      ...
+      logger.info("Terminando proceso.")
 
 
 # Zona de ejecucion
 if __name__ == '__main__':
-   main()
+   asyncio.run(main())
    sys.exit(0)

@@ -6,17 +6,9 @@ CREATE TABLE IF NOT EXISTS web_sources (
    title TEXT
 );
 
-CREATE TABLE IF NOT EXISTS owner_contacts (
-   id_owner_contact SERIAL PRIMARY KEY,
-   profile_link TEXT UNIQUE,
-   name TEXT,
-   phone TEXT
-);
-
 CREATE TABLE IF NOT EXISTS raw_posts (
    id_raw_post SERIAL PRIMARY KEY,
    id_web_src INTEGER REFERENCES web_sources(id_web_src),
-   id_owner_contact INTEGER REFERENCES owner_contacts(id_owner_contact),
    post_link TEXT UNIQUE,
    raw_text TEXT UNIQUE
 );
@@ -34,7 +26,10 @@ CREATE TABLE IF NOT EXISTS cars (
    condition TEXT,
    owners INTEGER,
    price INTEGER NOT NULL,
-   location TEXT
+   location TEXT,
+   profile_link TEXT,
+   contact_name TEXT,
+   contact_phone INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS cars_images (
