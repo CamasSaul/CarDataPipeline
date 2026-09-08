@@ -1,5 +1,5 @@
 [project]
-name = "car-pipeline-scrapper"
+name = "car-pipeline-scraper"
 version = "2026.09.03"
 dependencies = [
    "psycopg[binary]",
@@ -7,11 +7,11 @@ dependencies = [
    "bs4",
    "lxml"
 ]
-requires-python = ">=3.13.15"
+requires-python = ">=3.12.3"
 authors = [
    {name = "Saul Torres Camas", email = "camas17st@outlook.com"}
 ]
-description = "This is the scrapper pipeline's worker."
+description = "This is the scraper pipeline's worker."
 
 [tool.setuptools]
-py-modules = ["scrapping", "scrapper"]
+py-modules = ["scraping", "scraper"]

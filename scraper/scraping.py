@@ -12,7 +12,7 @@ import sys
 import os
 
 # Local modules imports
-from scrapper import scrapper_cicle
+from scraper import scraper_cicle
 
 # Typing imports
 from typing import Any
@@ -20,7 +20,7 @@ from typing import Any
 
 # Resolver rutas
 BASE_DIR = pathlib.Path(__file__).resolve().parent
-LOG_FILE_PATH = BASE_DIR / "scrapper.log"
+LOG_FILE_PATH = BASE_DIR / "scraper.log"
 
 # Obtener argumentos
 parser = argparse.ArgumentParser()
@@ -84,7 +84,7 @@ def get_web_sources() -> list[dict[str, Any]]:
    ]
 
 
-# Insertar los datos de un cilco de scrapping a la base de datos
+# Insertar los datos de un cilco de scraping a la base de datos
 def insert_raw_posts_to_db(raw_posts:list[tuple[Any]]) -> None:
    for raw_post in raw_posts:
       with psycopg.connect(DATABASE_URL) as conn:
@@ -107,18 +107,18 @@ async def main():
          sys.exit(2)
       # Extraer la fuente para scrapear
       sources = get_web_sources()
-      # Consumir el generador asincrono del modulo scrapper.py
-      async for raw_posts, raw_imgs in scrapper_cicle(sources):
-         # Insertar los datos extraidos a la db
-         for raw_post in raw_posts:
-            logger.debug(f'{raw_post}')
-         # TODO insert_raw_posts_to_db(raw_posts)
-         # Procesar las imagenes extraidas (comprimir, seleccionar)
-         # TODO process_raw_imgs(raw_imgs)
-         # Insertar imagenes procesadas a la db
-         # TODO insert_imgs_to_db
-         # TODO Esperar un delay
-      # Pasos finales del proceso de scrapping
+      # Consumir el generador asincrono del modulo scraper.py
+      logger.
+      # async for raw_posts, raw_imgs in scraper_cicle(sources):
+      #    # Insertar los datos extraidos a la db
+      #    logger.debug(f'{len(raw_posts)} posts scrapeados.')
+      #    # TODO insert_raw_posts_to_db(raw_posts)
+      #    # Procesar las imagenes extraidas (comprimir, seleccionar)
+      #    # TODO process_raw_imgs(raw_imgs)
+      #    # Insertar imagenes procesadas a la db
+      #    # TODO insert_imgs_to_db
+      #    # TODO Esperar un delay
+      # Pasos finales del proceso de scraping
    except KeyboardInterrupt:
       logger.warning("Proceso detenido por el usuario.")
    except Exception as e:

@@ -8,12 +8,16 @@ services:
       DATABASE_URL: postgresql://cars:fs2da@postgres:5432/cardb
       OLLAMA_URL: http://ollama:11434
 
-  scrapper:
-    build: ./scrapper
+  scraper:
+    build: ./scraper
     depends_on:
       - postgres
     environment:
       DATABASE_URL: postgresql://cars:fs2da@postgres:5432/cardb
+    mem_limit: 3g
+    memswap_limit: 3g
+    cpus: 4
+    pids_limit: 100
 
   postgres:
     image: postgres:17
