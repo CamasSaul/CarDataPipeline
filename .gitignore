@@ -5,3 +5,4 @@ dev
 *.log
 __pycache__/
 cookies.json
+secrets/

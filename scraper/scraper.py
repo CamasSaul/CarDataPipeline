@@ -4,6 +4,7 @@ import pathlib
 import asyncio
 import time
 import bs4
+import sys
 import re
 import os
 from playwright.async_api import async_playwright
@@ -11,6 +12,9 @@ from playwright.async_api import async_playwright
 # Typing imports
 from typing import Any
 
+
+# Obtener logger
+logger = logging.getLogger(__name__)
 
 # Resolver rutas
 BASE_DIR = pathlib.Path(__file__).resolve().parent
@@ -20,32 +24,21 @@ LOG_FILE_PATH = BASE_DIR / "scraper.log"
 COOKIES_FILE_PATH = BASE_DIR / "secrets/cookies.json"
 SCROLLS_PER_PAGE = 10
 if not os.path.exists(COOKIES_FILE_PATH):
-   get_cookies()
-
-
-# Obtener logger
-logger = logging.getLogger(__name__)
-
-
-async def get_cookies() -> bool:
-   input("Se necesitan cookies para iniciar el proceso de scraper." \
-   "Inicie sesión por única vez para establecer la configuración." \
-   "A continuación se abrirá un navegador dónde tendrá que iniciar sesión en el portal de facebook y resolver el captcha." \
-   "Presione enter para continuar...")
-   engine = await async_playwright().start()
-   navigator = getattr(engine, "firefox")
-   browser = await navigator.launch(headless=False)
-   context = await browser.new_context(storage_state=COOKIES_FILE_PATH, locale="es_LA")
-   return True
+   logger.fatal("No hay cookies para el proceso de scraping.")
+   sys.exit(3)
 
 
 async def scrap_page(context, link:str):
    page = await context.new_page()
-   await page.goto("https://facebook.com/" + link, wait_until='domcontentloaded')
+   await page.goto("https://facebook.com/" + link + "?locale=es_LA", wait_until='load')
+   try:
+      await page.get_by_role("button", name="See more").click()
+   except TimeoutError:
+      pass
    html = await page.content()
    soup = bs4.BeautifulSoup(html, "lxml")
    logger.debug("Text: " + " ".join(soup.get_text().replace('\n', ' ').split()))
-   page.close()
+   await page.close()
    return link
 
 
@@ -63,12 +56,12 @@ async def scraper_cicle(sources:list[dict[str, Any]]):
          logger.debug(f"Fuente de scraping: {source}")
          # Creamos la pagina y entramos al web_source
          page = await context.new_page()
-         await page.goto(source["url"], wait_until='domcontentloaded')
+         await page.goto(source["url"], wait_until='load')
          # Hacemos un scroll 'natural' al feed
          # por cada paso extraemos las publicaciones
          items_links:set[str] = set()
          for _ in range(SCROLLS_PER_PAGE):
-            logger.debug(f"Scraping scroll ({_}/{SCROLLS_PER_PAGE}))")
+            logger.debug(f"Scraping scroll ({_}/{SCROLLS_PER_PAGE})")
             for _ in range(5):
                await page.mouse.wheel(0, 180)
                await asyncio.sleep(0.1)

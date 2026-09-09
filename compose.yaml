@@ -14,6 +14,8 @@ services:
       - postgres
     environment:
       DATABASE_URL: postgresql://cars:fs2da@postgres:5432/cardb
+    volumes:
+      - .secrets:scraper/secrets
     mem_limit: 3g
     memswap_limit: 3g
     cpus: 4

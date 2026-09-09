@@ -58,6 +58,7 @@ logger = logging.getLogger(__name__)
 
 # Obtener variables de entorno
 DATABASE_URL = os.getenv("DATABASE_URL", default="")
+DATABASE_URL="postgresql://cars:fs2da@localhost:5433/cardb"
 if not DATABASE_URL:
    logger.error("No se econtro la variable de entorno: DATABASE_URL")
    sys.exit(2)
@@ -108,10 +109,9 @@ async def main():
       # Extraer la fuente para scrapear
       sources = get_web_sources()
       # Consumir el generador asincrono del modulo scraper.py
-      logger.
-      # async for raw_posts, raw_imgs in scraper_cicle(sources):
-      #    # Insertar los datos extraidos a la db
-      #    logger.debug(f'{len(raw_posts)} posts scrapeados.')
+      async for raw_posts, raw_imgs in scraper_cicle(sources):
+         # Insertar los datos extraidos a la db
+         logger.debug(f'{len(raw_posts)} posts scrapeados.')
       #    # TODO insert_raw_posts_to_db(raw_posts)
       #    # Procesar las imagenes extraidas (comprimir, seleccionar)
       #    # TODO process_raw_imgs(raw_imgs)
