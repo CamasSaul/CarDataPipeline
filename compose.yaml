@@ -15,11 +15,10 @@ services:
     environment:
       DATABASE_URL: postgresql://cars:fs2da@postgres:5432/cardb
     volumes:
-      - .secrets:scraper/secrets
-    mem_limit: 3g
-    memswap_limit: 3g
-    cpus: 4
-    pids_limit: 100
+      - ./scraper/secrets:/scraper/secrets/
+    init: true
+    security_opt:
+      - seccomp=./scraper/seccomp_profile.json
 
   postgres:
     image: postgres:17

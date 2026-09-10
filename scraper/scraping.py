@@ -1,5 +1,5 @@
 # READ HERE.
-# TODO
+# TODO documenta esto
 
 
 # Library imports
@@ -8,8 +8,10 @@ import asyncio
 import pathlib
 import logging
 import psycopg
+import csv
 import sys
 import os
+from datetime import datetime
 
 # Local modules imports
 from scraper import scraper_cicle
@@ -21,6 +23,7 @@ from typing import Any
 # Resolver rutas
 BASE_DIR = pathlib.Path(__file__).resolve().parent
 LOG_FILE_PATH = BASE_DIR / "scraper.log"
+METRICS_FILE_PATH = BASE_DIR / "metrics.csv"
 
 # Obtener argumentos
 parser = argparse.ArgumentParser()
@@ -49,21 +52,31 @@ LOGGING_LEVEL = letter_to_level[letter]
 
 # Configurar logging
 logging.basicConfig(
-   filename=LOG_FILE_PATH,
-   encoding='utf-8',
    level=LOGGING_LEVEL,
-   filemode='w'
+   handlers=[
+      logging.FileHandler(LOG_FILE_PATH, mode='w', encoding='utf-8'),
+      logging.StreamHandler()
+   ]
 )
 logger = logging.getLogger(__name__)
 
 # Obtener variables de entorno
 DATABASE_URL = os.getenv("DATABASE_URL", default="")
-DATABASE_URL="postgresql://cars:fs2da@localhost:5433/cardb"
 if not DATABASE_URL:
    logger.error("No se econtro la variable de entorno: DATABASE_URL")
    sys.exit(2)
 
-### Funciones ###
+### Variables de metrica ###
+init_timestamp = datetime.now().timestamp()
+metric_report = {
+   "iteration_datetime": datetime.now().isoformat(),
+   "total_web_sources_scraped": 0,
+   "total_scraped_posts": 0,
+   "total_new_rows": 0,
+   "total_repeated_rows": 0,
+   "total_spend_time_seconds": 0,
+   "total_cicles": 0
+}
 
 # Probar conexion con postgres
 def test_postgres_db() -> bool:
@@ -89,14 +102,19 @@ def get_web_sources() -> list[dict[str, Any]]:
 def insert_raw_posts_to_db(raw_posts:list[tuple[Any]]) -> None:
    for raw_post in raw_posts:
       with psycopg.connect(DATABASE_URL) as conn:
-         conn.execute(
-            "INSERT INTO raw_posts (" \
-            "id_web_src," \
-            "post_link," \
-            "raw_text," \
-            "VALUES (?,?,?)",
-            raw_post
-         )
+         try:      
+            conn.execute(
+               "INSERT INTO raw_posts (" \
+               "id_web_src," \
+               "post_link," \
+               "raw_text)" \
+               " VALUES (%s,%s,%s)",
+               raw_post
+            )
+            metric_report["total_new_rows"] += 1
+         except psycopg.errors.UniqueViolation:
+            logger.debug("UniqueViolation exception catched.")
+            metric_report["total_repeated_rows"] += 1
 
 
 # Main
@@ -108,24 +126,48 @@ async def main():
          sys.exit(2)
       # Extraer la fuente para scrapear
       sources = get_web_sources()
+      logger.info(f"Se obtuvieron {len(sources)} web sources para scrapear.")
+      metric_report["total_web_sources_scraped"] = len(sources)
       # Consumir el generador asincrono del modulo scraper.py
-      async for raw_posts, raw_imgs in scraper_cicle(sources):
+      logger.info("Iniciando proceso de scrapping.")
+      total_cicles = 0
+      logger.info(f"Iniciando nuevo ciclo. {metric_report['total_cicles']} ciclos completados.")
+      async for raw_texts, raw_imgs, id_web_source in scraper_cicle(sources):
          # Insertar los datos extraidos a la db
-         logger.debug(f'{len(raw_posts)} posts scrapeados.')
-      #    # TODO insert_raw_posts_to_db(raw_posts)
+         raw_posts = [(
+            id_web_source,
+            link,
+            raw_text)
+            for link, raw_text in raw_texts
+         ]
+         insert_raw_posts_to_db(raw_posts)
+         logger.info(f"Ciclo completado. {len(raw_texts)} registros scrapeados.")
+         logger.info(f"Total ciclos completados desde la ejecucion: {metric_report['total_cicles']}")
+         logger.info(f"Tiempo total desde la ejecucion: {datetime.now().timestamp() - init_timestamp}s")
+         metric_report["total_scraped_posts"] += len(raw_texts)
+         metric_report["total_cicles"] += 1
       #    # Procesar las imagenes extraidas (comprimir, seleccionar)
       #    # TODO process_raw_imgs(raw_imgs)
       #    # Insertar imagenes procesadas a la db
       #    # TODO insert_imgs_to_db
-      #    # TODO Esperar un delay
       # Pasos finales del proceso de scraping
+
    except KeyboardInterrupt:
       logger.warning("Proceso detenido por el usuario.")
    except Exception as e:
       logger.exception(e)
       sys.exit(1)
    finally:
+      # Guardar metric report
       logger.info("Terminando proceso.")
+      logger.info("Guardando reporte de metricas.")
+      metric_report["total_spend_time_seconds"] = datetime.now().timestamp() - init_timestamp
+      file_exists = os.path.exists(METRICS_FILE_PATH)
+      with open(METRICS_FILE_PATH, 'a', encoding='utf-8') as f:
+         w = csv.DictWriter(f, fieldnames=metric_report.keys())
+         if not file_exists:
+            w.writeheader()
+         w.writerow(metric_report)
 
 
 # Zona de ejecucion

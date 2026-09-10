@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS cars (
    location TEXT,
    profile_link TEXT,
    contact_name TEXT,
-   contact_phone INTEGER
+   contact_phone INTEGER,
+   llm_confidence_score REAL
 );
 
 CREATE TABLE IF NOT EXISTS cars_images (
@@ -46,3 +47,5 @@ CREATE TABLE IF NOT EXISTS cars_images (
 INSERT INTO web_sources (url, title) VALUES ('https://www.facebook.com/groups/2802491423342198?locale=es_LA', 'Autos en Venta Querétaro');
 INSERT INTO web_sources (url, title) VALUES ('https://www.facebook.com/groups/1712927538960670?locale=es_LA', 'venta y cambio de autos Querétaro (particulares). no coyotes .');
 INSERT INTO web_sources (url, title) VALUES ('https://www.facebook.com/groups/AUTOSencalientequeretaro?locale=es_LA', 'TIANGUIS DE AUTOS QUERETARO');
+INSERT INTO web_sources (url, title) VALUES ('https://www.facebook.com/groups/716816581684989?locale=es_LA', 'Venta de autos Querétaro');
+INSERT INTO web_sources (url, title) VALUES ('https://www.facebook.com/groups/1622108988029969?locale=es_LA', 'Autos Baratos Qro');
