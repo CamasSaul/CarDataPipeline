@@ -5,10 +5,8 @@ import bs4
 import sys
 import re
 import os
+from difflib import SequenceMatcher
 from playwright.async_api import async_playwright, TimeoutError
-
-# Typing imports
-from typing import Any
 
 
 # Obtener logger
@@ -20,27 +18,26 @@ LOG_FILE_PATH = BASE_DIR / "scraper.log"
 
 # Variables de configuracion
 COOKIES_FILE_PATH = BASE_DIR / "secrets/cookies.json"
-SCROLLS_PER_PAGE = 50
+SCROLLS_PER_WEB_SOURCE = 50
 if not os.path.exists(COOKIES_FILE_PATH):
    logger.fatal("No hay cookies para el proceso de scraping.")
    sys.exit(3)
 
 
-async def scrap_page(context, link:str):
-   page = await context.new_page()
-   await page.goto("https://facebook.com/" + link + "?locale=es_LA", wait_until='load')
-   try:
-      await page.get_by_role("button", name="See more").click()
-   except:
-      pass
-   html = await page.content()
-   await page.close()
-   soup = bs4.BeautifulSoup(html, "lxml")
-   text = " ".join(soup.get_text().replace('\n', ' ').split())
-   return link, text
+def clean_raw_text(text):
+   text = text.replace("Facebook", "")
+   text = text.replace("facebook", "")
+   text = text.replace("Shared with Public group", "")
+   text = text.replace("See translation", "")
+   text = text.replace("See less", "")
+   text = text.replace("See more", "")
+   text = text.replace("Submit your first comment…", "")
+   text = text.replace("…", "")
+   return " ".join(text.replace('\n', ' ').split())
 
 
-async def scraper_cicle(sources:list[dict[str, Any]]):
+
+async def scraper_cicle(sources:list[dict]):
    # Abrir una instancia del navegador y conectar con la fuente
    engine = await async_playwright().start()
    navigator = getattr(engine, "firefox")
@@ -48,52 +45,67 @@ async def scraper_cicle(sources:list[dict[str, Any]]):
    # Usamos cookies como contexto para cargar las paginas
    context = await browser.new_context(locale="es_LA")
    await context.set_storage_state(COOKIES_FILE_PATH)
-   # TODO comenta esta linea
+   # Este es el bucle generador
    while True:
-      try:
-         # El proceso re repite para cada web_source
-         for source in sources:
-            logger.debug(f"Fuente de scraping: {source}")
-            # Creamos la pagina y entramos al web_source
-            page = await context.new_page()
-            await page.goto(source["url"], wait_until='load')
-            # Hacemos un scroll 'natural' al feed
-            # por cada paso extraemos las publicaciones
-            items_links:set[str] = set()
-            for _ in range(SCROLLS_PER_PAGE):
-               logger.debug(f"Scraping scroll ({_+1}/{SCROLLS_PER_PAGE})")
-               for _ in range(5):
-                  await page.mouse.wheel(0, 180)
-                  await asyncio.sleep(0.1)
-               # Extraemos el contenido del feed
-               html = await page.content()
-               soup = bs4.BeautifulSoup(html, "lxml")
-               feed = soup.find("div", attrs={"role": "feed"})
-               # Extraemos los links de cada publicacion del feed
-               posts = feed.find_all("div", attrs={"aria-posinset": True})
-               # Por cada publicacion buscamos el link al item del marketplace,
-               # siempre comienza con "/commerce/listing/"
-               for post in posts:
-                  anchor = post.find('a', attrs={"href": re.compile(r"^/commerce/listing/")})
-                  if anchor:
-                     items_links.add(anchor["href"].split('?')[0])
-               logger.debug(f"{len(items_links)} links extraidos.")
-            await page.close()
-            # Ahora lanzamos un grupo de tareas para scrapear cada link al mismo tiempo
-            # el proceso se hace en grupos de 10 tasks
-            items_links = list(items_links)
-            results = []
-            for i in range(0, len(items_links), 10):
-               batch = items_links[i:i + 10]
-               async with asyncio.TaskGroup() as tg:
-                  tasks = [
-                        tg.create_task(scrap_page(context, link))
-                        for link in batch
-                  ]
-               for task in tasks:
-                  results.append(task.result())
-            # Retornamos los datos extraidos
-            yield results, [], source["id"]
-      except TimeoutError as e:
-         logger.warning(f"TimeoutError catched: {e.__traceback__}")
-         pass
+      # Cada ciclo es una fuente scrapeada
+      for source in sources:
+         # Creamos la ventana y entramos al url
+         logger.debug(f"Fuente de scraping: {source}")
+         page = await context.new_page()
+         await page.goto(source["url"], wait_until='load')
+         # Hacemos un scroll 'natural' al feed para recolectar los posts
+         for _ in range(SCROLLS_PER_WEB_SOURCE):
+            # Scroll
+            logger.debug(f"Scraping scroll ({_+1}/{SCROLLS_PER_WEB_SOURCE})")
+            for _ in range(5):
+               await page.mouse.wheel(0, 180)
+               await asyncio.sleep(0.1)
+            # Presionar el boton See more mientras se hace scroll al feed
+            see_more = page.get_by_role("button", name="See more").first
+            try:
+               await see_more.wait_for(state="visible", timeout=500)
+               await see_more.click(timeout=1000)
+            except:
+               pass
+         # Extraemos el html de tood el feed cargado
+         html = await page.content()
+         soup = bs4.BeautifulSoup(html, "lxml")
+         feed = soup.find("div", attrs={"role": "feed"})
+         # Extraemos las publicaciones individuales del feed
+         posts = feed.find_all("div", attrs={"aria-posinset": True})
+         # Recolectamos los textos de cada post y despues de un
+         # proceso para evitar duplicados, los retornamos con yield
+         results = set() # Este set contiene los datos scrapeados
+         for post in posts:
+            # Obtener unicamente el texto del html del post
+            raw_text = post.get_text()
+            # Limpiamos de caracteres/palabras inutiles
+            raw_text = clean_raw_text(raw_text)
+            if not raw_text:
+               continue
+            if not results:
+               results.add(raw_text)
+            # Omitimos los textos que tengan un 80% de similitud
+            # con los textos ya guardados
+            omit = False
+            for r in results:
+               if SequenceMatcher(
+                  None,
+                  r,
+                  raw_text
+               ).ratio() > .8:
+                  # Si encontramos dos textos similares, conservamos 
+                  # el que contenga mas carateres
+                  if len(r) >= len(raw_text):
+                     omit = True
+                     break
+                  else:
+                     results.remove(r)
+                     results.add(raw_text)
+                  break
+            # Gaurdamos el texto si paso la prueba de similitud
+            if not omit:
+               results.add(raw_text)
+         # Cerramos el ciclo y retornamos los datos
+         await page.close()
+         yield results, source["id"]

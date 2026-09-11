@@ -1,7 +1,3 @@
-# READ HERE.
-# TODO documenta esto
-
-
 # Library imports
 import argparse
 import asyncio
@@ -13,12 +9,8 @@ import sys
 import os
 from datetime import datetime
 
-# Local modules imports
+# modules imports
 from scraper import scraper_cicle
-
-# Typing imports
-from typing import Any
-
 
 # Resolver rutas
 BASE_DIR = pathlib.Path(__file__).resolve().parent
@@ -74,8 +66,8 @@ metric_report = {
    "total_scraped_posts": 0,
    "total_new_rows": 0,
    "total_repeated_rows": 0,
-   "total_spend_time_seconds": 0,
-   "total_cicles": 0
+   "total_cicles": 0,
+   "total_spend_time_seconds": 0
 }
 
 # Probar conexion con postgres
@@ -86,7 +78,7 @@ def test_postgres_db() -> bool:
 
 
 # Obtener los web_sources de la base de datos
-def get_web_sources() -> list[dict[str, Any]]:
+def get_web_sources() -> list[dict[str]]:
    with psycopg.connect(DATABASE_URL) as conn:
       cur = conn.execute("SELECT * FROM web_sources;")
       sources = cur.fetchall()
@@ -99,16 +91,15 @@ def get_web_sources() -> list[dict[str, Any]]:
 
 
 # Insertar los datos de un cilco de scraping a la base de datos
-def insert_raw_posts_to_db(raw_posts:list[tuple[Any]]) -> None:
+def insert_raw_posts_to_db(raw_posts:list) -> None:
    for raw_post in raw_posts:
       with psycopg.connect(DATABASE_URL) as conn:
          try:      
             conn.execute(
                "INSERT INTO raw_posts (" \
                "id_web_src," \
-               "post_link," \
                "raw_text)" \
-               " VALUES (%s,%s,%s)",
+               " VALUES (%s,%s)",
                raw_post
             )
             metric_report["total_new_rows"] += 1
@@ -130,28 +121,20 @@ async def main():
       metric_report["total_web_sources_scraped"] = len(sources)
       # Consumir el generador asincrono del modulo scraper.py
       logger.info("Iniciando proceso de scrapping.")
-      total_cicles = 0
       logger.info(f"Iniciando nuevo ciclo. {metric_report['total_cicles']} ciclos completados.")
-      async for raw_texts, raw_imgs, id_web_source in scraper_cicle(sources):
+      async for raw_texts, id_web_source in scraper_cicle(sources):
          # Insertar los datos extraidos a la db
          raw_posts = [(
             id_web_source,
-            link,
             raw_text)
-            for link, raw_text in raw_texts
+            for raw_text in raw_texts
          ]
          insert_raw_posts_to_db(raw_posts)
+         metric_report["total_scraped_posts"] += len(raw_texts)
+         metric_report["total_cicles"] += 1
          logger.info(f"Ciclo completado. {len(raw_texts)} registros scrapeados.")
          logger.info(f"Total ciclos completados desde la ejecucion: {metric_report['total_cicles']}")
          logger.info(f"Tiempo total desde la ejecucion: {datetime.now().timestamp() - init_timestamp}s")
-         metric_report["total_scraped_posts"] += len(raw_texts)
-         metric_report["total_cicles"] += 1
-      #    # Procesar las imagenes extraidas (comprimir, seleccionar)
-      #    # TODO process_raw_imgs(raw_imgs)
-      #    # Insertar imagenes procesadas a la db
-      #    # TODO insert_imgs_to_db
-      # Pasos finales del proceso de scraping
-
    except KeyboardInterrupt:
       logger.warning("Proceso detenido por el usuario.")
    except Exception as e:

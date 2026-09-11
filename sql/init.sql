@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS web_sources (
 CREATE TABLE IF NOT EXISTS raw_posts (
    id_raw_post SERIAL PRIMARY KEY,
    id_web_src INTEGER REFERENCES web_sources(id_web_src),
-   post_link TEXT UNIQUE,
    raw_text TEXT UNIQUE
 );
 
@@ -18,7 +17,6 @@ CREATE TABLE IF NOT EXISTS cars (
    id_raw_post INTEGER REFERENCES raw_posts(id_raw_post),
    brand TEXT,
    model TEXT NOT NULL,
-   trim TEXT,
    year INTEGER NOT NULL,
    transmission TEXT,
    km INTEGER,
@@ -27,20 +25,9 @@ CREATE TABLE IF NOT EXISTS cars (
    owners INTEGER,
    price INTEGER NOT NULL,
    location TEXT,
-   profile_link TEXT,
    contact_name TEXT,
    contact_phone INTEGER,
    llm_confidence_score REAL
-);
-
-CREATE TABLE IF NOT EXISTS cars_images (
-   id_img SERIAL PRIMARY KEY,
-   id_raw_post INTEGER REFERENCES raw_posts(id_raw_post),
-   img_1 BYTEA,
-   img_2 BYTEA,
-   img_3 BYTEA,
-   img_4 BYTEA,
-   img_5 BYTEA
 );
 
 -- Paginas fuente preconfiguradas
