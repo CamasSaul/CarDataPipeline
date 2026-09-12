@@ -5,7 +5,8 @@ from playwright.async_api import async_playwright
 
 URL = "https://facebook.com"
 COOKIES_PATH = "scraper/secrets/"
-os.makedirs(COOKIES_PATH)
+if not os.path.exists(COOKIES_PATH):
+   os.makedirs(COOKIES_PATH)
 
 
 async def get_cookies():
@@ -16,7 +17,7 @@ async def get_cookies():
    engine = await async_playwright().start()
    navigator = getattr(engine, "firefox")
    browser = await navigator.launch(headless=False)
-   context = await browser.new_context(locale="es_LA")
+   context = await browser.new_context()
    page = await context.new_page()
    await page.goto(URL)
    input("Presione de nuevo enter después de iniciar sesión...")

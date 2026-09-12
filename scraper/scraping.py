@@ -4,6 +4,7 @@ import asyncio
 import pathlib
 import logging
 import psycopg
+import hashlib
 import csv
 import sys
 import os
@@ -98,8 +99,11 @@ def insert_raw_posts_to_db(raw_posts:list) -> None:
             conn.execute(
                "INSERT INTO raw_posts (" \
                "id_web_src," \
-               "raw_text)" \
-               " VALUES (%s,%s)",
+               "raw_text," \
+               "hash," \
+               "timestamp," \
+               "process_status)" \
+               " VALUES (%s,%s,%s,%s,%s)",
                raw_post
             )
             metric_report["total_new_rows"] += 1
@@ -124,12 +128,16 @@ async def main():
       logger.info(f"Iniciando nuevo ciclo. {metric_report['total_cicles']} ciclos completados.")
       async for raw_texts, id_web_source in scraper_cicle(sources):
          # Insertar los datos extraidos a la db
-         raw_posts = [(
-            id_web_source,
-            raw_text)
-            for raw_text in raw_texts
-         ]
-         insert_raw_posts_to_db(raw_posts)
+         if raw_texts:
+            raw_posts = [(
+               id_web_source,
+               raw_text,
+               hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
+               datetime.now().isoformat(),
+               "pending")
+               for raw_text in raw_texts
+            ]
+            insert_raw_posts_to_db(raw_posts)
          metric_report["total_scraped_posts"] += len(raw_texts)
          metric_report["total_cicles"] += 1
          logger.info(f"Ciclo completado. {len(raw_texts)} registros scrapeados.")

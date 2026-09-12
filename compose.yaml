@@ -16,6 +16,8 @@ services:
       DATABASE_URL: postgresql://cars:fs2da@postgres:5432/cardb
     volumes:
       - ./scraper/secrets:/scraper/secrets/
+      - ./scraper/metrics.csv:/scraper/metrics.csv
+      - ./scraper/scraper.log:/scraper/scraper.log
     init: true
     security_opt:
       - seccomp=./scraper/seccomp_profile.json
@@ -36,6 +38,7 @@ services:
     image: ollama/ollama:latest
     volumes:
       - ollama_data:/root/.ollama
+      - ./models:/models
 
 volumes:
   postgres_data:

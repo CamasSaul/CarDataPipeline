@@ -1,9 +1,32 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+Este es el historial de cambios al componente scraper.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), y este proyecto se alinea al [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+
+## [2.1.0]
+
+### Added
+
+- Se añadio una funcion `scraper:click_buttons`. Para modularizar.
+- Se añadieron más de 100 registros web_source al `init.sql`.
+- Sea añadió el campo `hash` a la tabla `raw_posts` para tener un identificador único y no repetir registros.
+
+### Changed
+
+- Textos extraidos de publicaciones que no se hayan expandido o que estén traducidas automáticamente, son descartados.
+
+### Fixed
+
+- Se corrigió problemas con el tamaño de `raw_text`.
+- Se corrigió la forma en que se presionan los botones del feed.
+- Se corrigió el origen de textos no expandidos en `scraper.py`.
+
+### Removed
+
+- Se eliminó la instrucción UNIQUE del campo `raw_text`, ya que limitaba el tamaño máximo de un texto extraído.
+
 
 ## [2.0.0]
 
