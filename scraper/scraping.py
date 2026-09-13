@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # modules imports
-from scraper import scraper_cicle
+from scraper import scraper_cicle, NotSessionError
 
 # Resolver rutas
 BASE_DIR = pathlib.Path(__file__).resolve().parent
@@ -21,34 +21,28 @@ METRICS_FILE_PATH = BASE_DIR / "metrics.csv"
 # Obtener argumentos
 parser = argparse.ArgumentParser()
 parser.add_argument(
-   "-l", "--loglevel",
-   help="el nivel del logging. Opciones: 'd':DEBUG, 'i':INFO, 'w':WARNING, 'e':ERROR",
-   choices=['d', 'i', 'w', 'e'],
-   default='i'
-)
-parser.add_argument(
    "-d", "--debug",
    action="store_true",
-   help="inicia el proceso en modo debug."
+   help="establece el logging level en DEBUG."
 )
 args = parser.parse_args()
-letter_to_level = {
-   'd' : logging.DEBUG,
-   'i' : logging.INFO,
-   'w' : logging.WARNING,
-   'e' : logging.ERROR
-}
-letter = args.loglevel
-if args.debug:
-   letter = 'd'
-LOGGING_LEVEL = letter_to_level[letter]
+LOGGING_LEVEL = "DEBUG" if args.debug else "INFO"
 
 # Configurar logging
+f_hdlr = logging.FileHandler(LOG_FILE_PATH, mode='w', encoding="utf-8")
+f_hdlr.setFormatter( logging.Formatter(
+   "%(asctime)s | %(levelname)-8s | PID=%(process)d | %(name)s | %(message)s")
+)
+s_hdlr = logging.StreamHandler()
+s_hdlr.setFormatter(logging.Formatter(
+   "%(asctime)s | %(levelname)-8s | PID=%(process)d | %(name)s | %(filename)s:%(lineno)4d | %(message)s",
+   datefmt="%H:%M:%S")
+)
 logging.basicConfig(
    level=LOGGING_LEVEL,
    handlers=[
-      logging.FileHandler(LOG_FILE_PATH, mode='w', encoding='utf-8'),
-      logging.StreamHandler()
+      f_hdlr,
+      s_hdlr
    ]
 )
 logger = logging.getLogger(__name__)
@@ -56,7 +50,7 @@ logger = logging.getLogger(__name__)
 # Obtener variables de entorno
 DATABASE_URL = os.getenv("DATABASE_URL", default="")
 if not DATABASE_URL:
-   logger.error("No se econtro la variable de entorno: DATABASE_URL")
+   logger.fatal("No se econtro la variable de entorno: DATABASE_URL")
    sys.exit(2)
 
 ### Variables de metrica ###
@@ -70,6 +64,7 @@ metric_report = {
    "total_cicles": 0,
    "total_spend_time_seconds": 0
 }
+
 
 # Probar conexion con postgres
 def test_postgres_db() -> bool:
@@ -118,7 +113,7 @@ async def main():
       # Probar conexion a la base de datos
       if not test_postgres_db():
          logger.error("No se pudo conectar con la db.")
-         sys.exit(2)
+         sys.exit(3)
       # Extraer la fuente para scrapear
       sources = get_web_sources()
       logger.info(f"Se obtuvieron {len(sources)} web sources para scrapear.")
@@ -144,9 +139,12 @@ async def main():
          logger.info(f"Total ciclos completados desde la ejecucion: {metric_report['total_cicles']}")
          logger.info(f"Tiempo total desde la ejecucion: {datetime.now().timestamp() - init_timestamp}s")
    except KeyboardInterrupt:
-      logger.warning("Proceso detenido por el usuario.")
-   except Exception as e:
-      logger.exception(e)
+      logger.info("Proceso detenido por el usuario.")
+   except NotSessionError:
+      logger.error(f"Error de sesion, durante el ciclo {metric_report['total_cicles'] + 1}.")
+      sys.exit(0)
+   except Exception:
+      logger.exception("Exception en el proceso principal.")
       sys.exit(1)
    finally:
       # Guardar metric report

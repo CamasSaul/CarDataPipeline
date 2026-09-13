@@ -1,6 +1,6 @@
 services:
-  app:
-    build: ./app
+  processor:
+    build: ./processor
     depends_on:
       - postgres
       - ollama
@@ -19,6 +19,7 @@ services:
       - ./scraper/metrics.csv:/scraper/metrics.csv
       - ./scraper/scraper.log:/scraper/scraper.log
     init: true
+    restart: on-failure
     security_opt:
       - seccomp=./scraper/seccomp_profile.json
 

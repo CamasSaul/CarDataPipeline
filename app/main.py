@@ -1,1 +1,0 @@
-print('Hello, works correctly!')

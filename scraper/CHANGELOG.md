@@ -1,12 +1,33 @@
 # Changelog
 
-Este es el historial de cambios al componente scraper.
+Este es el historial de cambios al componente `scraper/`.
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), y este proyecto se alinea al [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.2.0] - 2026-09-13
 
-## [2.1.1]
+### Added
+
+- Se añadió una comprobación de inicio de sesión antes de scrapear cada ciclo.
+- Se añadió funcionalidad al logging de `scraping.py`. Ahora tiene formatos mas detallados para el logfile y la salida de consola.
+
+### Fixed
+
+- Se corrigió una fuga de memoria en `scraper.py` relacionada con páginas abiertas sin cerrar después de una excepción.
+
+### Changed
+
+- Se modificaron los logs para ser más claros y específicos.
+- Se agregó la instrucción para reiniciar el componente en caso de un error fatal.
+- Se modificó el log para errores, ahora se guarda el traceback  completo.
+
+### Removed
+
+- Se eliminó el argumento --loglevel por completo, ya que estaba en desuso.
+
+
+## [2.1.1] - 2026-09-12
 
 ### Fixed
 
@@ -15,7 +36,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Se quitó un import en desuso.
 
 
-## [2.1.0]
+## [2.1.0] - 2026-09-12
 
 ### Added
 
@@ -38,7 +59,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Se eliminó la instrucción UNIQUE del campo `raw_text`, ya que limitaba el tamaño máximo de un texto extraído.
 
 
-## [2.0.0]
+## [2.0.0] - 2026-09-11
 
 ### Added
 

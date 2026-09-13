@@ -25,6 +25,10 @@ if not os.path.exists(COOKIES_FILE_PATH):
    sys.exit(3)
 
 
+class NotSessionError(Exception):
+    pass
+
+
 def clean_raw_text(text):
    text = text.replace("Facebook", " ")
    text = text.replace("facebook", " ")
@@ -96,7 +100,7 @@ async def scraper_cicle(sources:list[dict]):
                for _ in range(5):
                   await page.mouse.wheel(0, 180)
                   await asyncio.sleep(0.1)
-               # Presionar el boton See more mientras se hace scroll al feed
+               # Presionar los botones de posts mientras se hace scroll al feed
                see_more_clicked = await click_buttons(page, "See more")
                if see_more_clicked:
                   logger.debug(
@@ -112,6 +116,9 @@ async def scraper_cicle(sources:list[dict]):
             # Extraemos el html de tood el feed cargado
             html = await page.content()
             soup = bs4.BeautifulSoup(html, "lxml")
+            # Comprobar si hay sesion iniciada
+            if soup.find_all('a', attrs={"aria-label":"Log In"}):
+               raise NotSessionError("La web no tiene sesion iniciada.")
             feed = soup.find("div", attrs={"role": "feed"})
             # Extraemos las publicaciones individuales del feed
             posts = feed.find_all("div", attrs={"aria-posinset": True})
@@ -159,6 +166,11 @@ async def scraper_cicle(sources:list[dict]):
             # Cerramos el ciclo y retornamos los datos
             await page.close()
             yield results, source["id"]
+         except NotSessionError as e:
+            logger.error(f"Se perdió la sesión en: {source}")
+            raise e
          except Exception as e:
-            logger.warning(f'Error capturado durante el ciclo. {e}')
-            yield [], 0
+            logger.exception(f'Exception capturada durante el ciclo. {e}')
+            yield [], -1
+         finally:
+            await page.close()
