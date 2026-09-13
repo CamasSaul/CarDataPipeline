@@ -3,7 +3,6 @@ import pathlib
 import asyncio
 import bs4
 import sys
-import re
 import os
 from difflib import SequenceMatcher
 from playwright.async_api import (
@@ -20,7 +19,7 @@ LOG_FILE_PATH = BASE_DIR / "scraper.log"
 
 # Variables de configuracion
 COOKIES_FILE_PATH = BASE_DIR / "secrets/cookies.json"
-SCROLLS_PER_WEB_SOURCE = 60
+SCROLLS_PER_WEB_SOURCE = 100
 if not os.path.exists(COOKIES_FILE_PATH):
    logger.fatal("No hay cookies para el proceso de scraping.")
    sys.exit(3)
@@ -39,6 +38,12 @@ def clean_raw_text(text):
    text = text.replace("Write a public comment", " ")
    text = text.replace("Message", " ")
    text = text.replace("responsive", " ")
+   text = text.replace("Like", " ")
+   text = text.replace("Comment", " ")
+   text = text.replace("Share", " ")
+   text = text.replace("Reply", " ")
+   text = text.replace("Shared with Public", " ")
+   text = text.replace("…", " ")
    return " ".join(text.replace('\n', ' ').split())
 
 

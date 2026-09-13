@@ -5,6 +5,16 @@ Este es el historial de cambios al componente scraper.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), y este proyecto se alinea al [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+
+## [2.1.1]
+
+### Fixed
+
+- Se aumentó el número de scrolls por cilco de 60 a 100.
+- Se agregaron palabras para remplazar en `scraper:clean_raw_text`.
+- Se quitó un import en desuso.
+
+
 ## [2.1.0]
 
 ### Added
