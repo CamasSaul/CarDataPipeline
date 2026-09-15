@@ -4,6 +4,18 @@ Este es el historial de cambios al componente `scraper/`.
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), y este proyecto se alinea al [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Se agregó un test en `cookies:test_cookies` para validar si las cookies guardadas son válidas y vigentes.
+- Se automatizó la obtención de las cookies usando las credenciales de una cuenta de facebook registrada.
+- Se agregó el módulo `cookies.py`.
+
+## Removed
+
+- Se eliminó el archivo `setup.py` debido a que quedó en desuso.
+
 
 ## [2.2.0] - 2026-09-13
 

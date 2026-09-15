@@ -14,4 +14,4 @@ authors = [
 description = "This is the scraper pipeline's worker."
 
 [tool.setuptools]
-py-modules = ["scraping", "scraper"]
+py-modules = ["scraping", "scraper", "cookies"]

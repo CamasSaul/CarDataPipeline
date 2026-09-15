@@ -35,7 +35,7 @@ f_hdlr.setFormatter( logging.Formatter(
 )
 s_hdlr = logging.StreamHandler()
 s_hdlr.setFormatter(logging.Formatter(
-   "%(asctime)s | %(levelname)-8s | PID=%(process)d | %(name)s | %(filename)s:%(lineno)4d | %(message)s",
+   "%(asctime)s | %(levelname)-8s | PID=%(process)d | %(name)s | %(filename)s:%(lineno)-4d| %(message)s",
    datefmt="%H:%M:%S")
 )
 logging.basicConfig(
@@ -141,7 +141,10 @@ async def main():
    except KeyboardInterrupt:
       logger.info("Proceso detenido por el usuario.")
    except NotSessionError:
-      logger.error(f"Error de sesion, durante el ciclo {metric_report['total_cicles'] + 1}.")
+      logger.error(
+         "Error de sesion en el ciclo:" \
+         f"{metric_report['total_cicles'] + 1}"
+      )
       sys.exit(0)
    except Exception:
       logger.exception("Exception en el proceso principal.")

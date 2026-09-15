@@ -9,6 +9,9 @@ from playwright.async_api import (
     async_playwright,
     TimeoutError as PlaywrightTimeoutError,
 )
+# Modules
+from cookies import refresh_cookies
+
 
 # Obtener logger
 logger = logging.getLogger(__name__)
@@ -20,13 +23,22 @@ LOG_FILE_PATH = BASE_DIR / "scraper.log"
 # Variables de configuracion
 COOKIES_FILE_PATH = BASE_DIR / "secrets/cookies.json"
 SCROLLS_PER_WEB_SOURCE = 100
-if not os.path.exists(COOKIES_FILE_PATH):
-   logger.fatal("No hay cookies para el proceso de scraping.")
-   sys.exit(3)
+
+# Validar cookies
+async def validar_cookies():
+   if not os.path.exists(COOKIES_FILE_PATH):
+      logger.info("No hay cookies para el proceso de scraping.")
+      logger.info("Obteniendo cookies.")
+      if await refresh_cookies():
+         logger.info("Cookies creadas correctamente.")
+      else:
+         logger.fatal("No se pudo extraer las cookies.")
+         sys.exit(0)
 
 
 class NotSessionError(Exception):
-    pass
+   """La web no tiene sesion iniciada."""
+   pass
 
 
 def clean_raw_text(text):
@@ -77,13 +89,23 @@ async def click_buttons(page, name):
 
 
 async def scraper_cicle(sources:list[dict]):
+   # Validar las cookies
+   await validar_cookies()
    # Abrir una instancia del navegador y conectar con la fuente
    engine = await async_playwright().start()
    navigator = getattr(engine, "firefox")
    browser = await navigator.launch(headless=True)
    # Usamos cookies como contexto para cargar las paginas
    context = await browser.new_context()
-   await context.set_storage_state(COOKIES_FILE_PATH)
+   try:
+      ...
+      #await context.set_storage_state(COOKIES_FILE_PATH)
+   except:
+      logger.warning("No se pudo establecer el contexto.")
+      logger.info("Intenando actualizar las cookies.")
+      if await refresh_cookies():
+         logger.info(f"Cookies actualizadas correctamente.")
+         await context.set_storage_state(COOKIES_FILE_PATH)
    # Este es el bucle generador
    while True:
       # Cada ciclo es una fuente scrapeada
@@ -93,6 +115,12 @@ async def scraper_cicle(sources:list[dict]):
             logger.debug(f"Fuente de scraping: {source}")
             page = await context.new_page()
             await page.goto(source["url"], wait_until='load')
+            # Verificar que hay sesion iniciada
+            try:
+               profile_btn = page.get_by_label("Your profile").first
+               await profile_btn.wait_for(state="visible", timeout=10000)
+            except PlaywrightTimeoutError:
+               raise NotSessionError
             # Hacemos un scroll 'natural' al feed para recolectar los posts
             for _ in range(SCROLLS_PER_WEB_SOURCE):
                # Scroll
@@ -113,12 +141,9 @@ async def scraper_cicle(sources:list[dict]):
                      f"See original presionados: "
                      f"{see_original_clicked}"
                   )
-            # Extraemos el html de tood el feed cargado
+            # Extraemos el html de todo el feed cargado
             html = await page.content()
             soup = bs4.BeautifulSoup(html, "lxml")
-            # Comprobar si hay sesion iniciada
-            if soup.find_all('a', attrs={"aria-label":"Log In"}):
-               raise NotSessionError("La web no tiene sesion iniciada.")
             feed = soup.find("div", attrs={"role": "feed"})
             # Extraemos las publicaciones individuales del feed
             posts = feed.find_all("div", attrs={"aria-posinset": True})
@@ -163,12 +188,16 @@ async def scraper_cicle(sources:list[dict]):
                # Gaurdamos el texto si paso la prueba de similitud
                if not omit:
                   results.add(raw_text)
-            # Cerramos el ciclo y retornamos los datos
-            await page.close()
+            # Retornamos los datos
             yield results, source["id"]
          except NotSessionError as e:
-            logger.error(f"Se perdió la sesión en: {source}")
-            raise e
+            # Manejar error de sesion cuando las cookies expiran
+            logger.info(f"Se perdió la sesión en: {source}")
+            logger.info(f"Reiniciando cookies.")
+            if await refresh_cookies():
+               logger.info(f"Cookies actualizadas correctamente.")
+            else:
+               raise e
          except Exception as e:
             logger.exception(f'Exception capturada durante el ciclo. {e}')
             yield [], -1
